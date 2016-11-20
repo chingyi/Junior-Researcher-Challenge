@@ -49,6 +49,9 @@ function dashboard(id, fData, data){
     // compute total for each Chromosome.
 	fData.forEach(function(d){d.total=d.Type["single base substitution"]+d.Type["deletion of <=200bp"]+d.Type["insertion of <=200bp"];});
     
+	//filter list
+	var filterlist_chromosome=[],filterlist_type=[];
+	
     // function to handle histogram.
     function histoGram(fD){
         var hG={},    hGDim = {t: 60, r: 0, b: 30, l: 0};
@@ -85,8 +88,8 @@ function dashboard(id, fData, data){
             .attr("width", x.rangeBand())
             .attr("height", function(d) { return hGDim.h - y(d[1]); })
             .attr('fill',barColor)
-            .on("mouseover",mouseover) // click is defined below.
-            .on("mouseout",mouseout);// mouseout is defined below.
+            .on("click",mouseover) // click is defined below.
+            ;// mouseout is defined below.
             
         //Create the type labels above the rectangles.
         bars.append("text").text(function(d){ return d3.format(",")(d[1])})
@@ -98,11 +101,20 @@ function dashboard(id, fData, data){
             // filter for selected Chromosome.
             var st = fData.filter(function(s){ return s.Chromosome == d[0];})[0],
                 nD = d3.keys(st.Type).map(function(s){ return {type:s, Type:st.Type[s]};});
+				
+
                
             // call update functions of pie-chart and legend.    
             pC.update(nD);
             leg.update(nD);
 			list_chromosome(st.Chromosome);
+		
+			//alert(st.Chromosome);
+			if((jQuery.inArray( st.Chromosome, filterlist_chromosome ))== '-1'){
+				filterlist_chromosome.push(st.Chromosome);
+			}
+			//alert(filterlist_chromosome);
+			
         }
         
         function mouseout(d){    // utility function to be called on mouseout.
@@ -154,7 +166,7 @@ function dashboard(id, fData, data){
         piesvg.selectAll("path").data(pie(pD)).enter().append("path").attr("d", arc)
             .each(function(d) { this._current = d; })
             .style("fill", function(d) { return segColor(d.data.type); })
-            .on("mouseover",mouseover).on("mouseout",mouseout);
+            .on("click",mouseover);
 
         // create function to update pie-chart. This will be used by histogram.
         pC.update = function(nD){
@@ -163,10 +175,19 @@ function dashboard(id, fData, data){
         }        
         // Utility function to be called on mouseover a pie slice.
         function mouseover(d){
+			
+			
             // call the update function of histogram with new data.
             hG.update(fData.map(function(v){ 
                 return [v.Chromosome,v.Type[d.data.type]];}),segColor(d.data.type));
             list_type(d.data.type);
+			//alert(d.data.type);
+			if((jQuery.inArray( d.data.type, filterlist_type ))== '-1'){
+				
+				filterlist_type.push(d.data.type);
+			}
+			
+			//alert(filterlist_type);
         }
         //Utility function to be called on mouseout a pie slice.
         function mouseout(d){
@@ -230,12 +251,12 @@ function dashboard(id, fData, data){
         return leg;
     }
 
+  
   //produce an information list by type
   function list_type(type){
             //alert(type);
             $('#test2').remove();
             $('#test').append('<span id = "test2">');
-			//$('#test2').append('<button onclick="FilterClear()">Click me</button></br>);
             for (var i = 0; i < data.hits.length; i++) {
                 if (data.hits[i].type == type){
                     $('#test2').append(data.hits[i].id + '  ' +  data.hits[i].type + '  ' + data.hits[i].chromosome + '  ' + data.hits[i].start + '  ' + data.hits[i].end + '  ' + data.hits[i].mutation + '<br/>');
@@ -264,17 +285,11 @@ function dashboard(id, fData, data){
 		 $('#test2').append('</span>');
  
  }
- //clear the filter [failed]
-  function FilterClear(){
-           // call the update function of histogram with all data.
-           hG.update(fData.map(function(v){
-                return [v.Chromosome,v.total];}), barColor);
-		  // reset the pie-chart and legend.    
-            pC.update(tF);
-            leg.update(tF);
-			
-   }
 
+ function filter(chromosome,type){
+ 
+ 
+ }
 
     // calculate total type by segment for all chromosome.
     var tF = ['single base substitution','deletion of <=200bp','insertion of <=200bp'].map(function(d){ 
@@ -287,16 +302,33 @@ function dashboard(id, fData, data){
     var hG = histoGram(sF), // create the histogram.
         pC = pieChart(tF), // create the pie-chart.
         leg= legend(tF);  // create the legend.
-		
-		
+
+
+		// clear the filter
+(function (){
+  var element = document.createElement('button');
+  element.innerHTML = 'clear';
+  element.onclick = function(){
+    pC.update(tF);
+    leg.update(tF);
+    list_all();
+    hG.update(fData.map(function(v){
+                return [v.Chromosome,v.total];}), barColor);
+  };
+  document.getElementById("clearbutton").appendChild(element);
+  //document.body.appendChild(element);
+}());
+        
 
 }
 </script>
 
-<span id = "test">Related Data<br/>
+
+
+
+<span id = "test">Related Data <div id= "clearbutton"> </div>
 <span id = "test2">
 </span></span>
-
 <script>
 //catch the api data
  function test(callback){
@@ -312,9 +344,12 @@ var jsonM = [];
 test(function(data){
 
 	var count_s=[],count_d=[],count_i=[];
-	for(j=1;j<=24;j++){
+	
+	for(j=1;j<=22;j++){
 		count_s[j]=0,count_d[j]=0,count_i[j]=0;
-
+		count_s[23]=0,count_d[23]=0,count_i[23]=0;
+		count_s[24]=0,count_d[24]=0,count_i[24]=0;
+		
 		for(i =0;i<data.hits.length;i++){
 			if(data.hits[i].chromosome== j){
 				if(data.hits[i].type =="single base substitution") {
